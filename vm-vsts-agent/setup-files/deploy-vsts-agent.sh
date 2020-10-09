@@ -16,6 +16,7 @@ download_aptfiles() {
 
 install_packages() {
     apt-get update
+    apt-get upgrade -y
     apt-get install -y \
         build-essential \
         jq \
@@ -66,3 +67,6 @@ install_packages
 download_vsts_agent
 configure_vsts_agent
 install_vsts_agent_service
+
+##
+shutdown -r now
