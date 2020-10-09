@@ -56,7 +56,8 @@ configure_vsts_agent() {
 install_vsts_agent_service() {
     cd ${VSTS_AGENT_DIR}
 
-    ./svc.sh install
+    ## Must specify running user
+    ./svc.sh install root
     ./svc.sh start
 }
 
