@@ -136,9 +136,7 @@
             "createOption": "fromImage",
             "managedDisk": {
               "storageAccountType": "Standard_LRS"
-            },
-            "caching": "ReadOnly",
-            "diffDiskSettings": { "option": "Local" }
+            }
           },
           "imageReference": {
             "publisher": "Canonical",
