@@ -67,6 +67,3 @@ install_packages
 download_vsts_agent
 configure_vsts_agent
 install_vsts_agent_service
-
-##
-shutdown -r now
