@@ -2,27 +2,21 @@
 
 set -e
 
-TOKEN=$1
-ORG=$2
-AGENT=$3
-VSTS_AGENT_VERSION=2.175.2
 DOTNET_RUNTIME_VERSION=3.1
 VSTS_AGENT_DIR=/opt/vstsagent
-MY_TIMEZONE=Asia/Tokyo
+FILES_URL_BASE=https://raw.githubusercontent.com/sengokyu/azure-templates/main/vm-vsts-agent/setup-files/
 
 export AGENT_ALLOW_RUNASROOT=yes
 
-set_timezone() {
-    timedatectl set-timezone $MY_TIMEZONE
-}
-
 download_aptfiles() {
-    curl https://devtracon.blob.core.windows.net/setup-azure-pipelines-agent/azure-cli.list -o /etc/apt/sources.list.d/azure-cli.list
-    curl https://devtracon.blob.core.windows.net/setup-azure-pipelines-agent/microsoft-prod.gpg -o /etc/ap/trusted.gpg.d/microsoft-prod.gpg
+    curl -L ${FILES_URL_BASE}/azure-cli.list -o /etc/apt/sources.list.d/azure-cli.list
+    curl -L ${FILES_URL_BASE}/microsoft-prod.list -o /etc/apt/sources.list.d/microsoft-prod.list
+    curl -L ${FILES_URL_BASE}/microsoft-prod.gpg -o /etc/apt/trusted.gpg.d/microsoft-prod.gpg
 }
 
 install_packages() {
-    apt-get update && apt-get install -y \
+    apt-get update
+    apt-get install -y \
         build-essential \
         jq \
         zip \
@@ -31,9 +25,17 @@ install_packages() {
         dotnet-runtime-${DOTNET_RUNTIME_VERSION}
 }
 
+get_latest_vsts_agent_url() {
+    local assets_url=$(curl -sL https://api.github.com/repos/Microsoft/vsts-agent/releases/latest | jq -r '.assets[0].browser_download_url')
+    
+    curl -L $assets_url | jq -r '. | map(select(.platform == "linux-x64")) | .[0].downloadUrl'
+}
+
 download_vsts_agent() {
-    mkdir ${VSTS_AGENT_DIR} \
-        && curl -sL https://vstsagentpackage.azureedge.net/agent/${VSTS_AGENT_VERSION}/vsts-agent-linux-x64-${VSTS_AGENT_VERSION}.tar.gz | tar zxf - -C ${VSTS_AGENT_DIR}
+    local targzurl=$(get_latest_vsts_agent_url)
+
+    mkdir ${VSTS_AGENT_DIR}
+    curl -L $targzurl | tar zxf - -C ${VSTS_AGENT_DIR}
 }
 
 configure_vsts_agent() {
@@ -45,7 +47,22 @@ configure_vsts_agent() {
         --auth pat \
         --token "${TOKEN}" \
         --pool "${POOL:-Default}" \
-        --agent "${AGENT:-ubuntu-agent}" \
+        --agent "$(hostname)" \
         --replace \
         acceptTeeEula
 }
+
+install_vsts_agent_service() {
+    cd ${VSTS_AGENT_DIR}
+
+    ./svc.sh install
+    ./svc.sh start
+}
+
+
+## Main
+download_aptfiles
+install_packages
+download_vsts_agent
+configure_vsts_agent
+install_vsts_agent_service
