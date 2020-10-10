@@ -18,6 +18,7 @@
 * username
 * sshPublicKey
 * sshSourceAddress
+* count (optional) - Number of Agents
 * orgName - Name of Azure Devops Organization
 * poolName - Name of Azure Devops Pipelines Agent Pool
 * token - Personal Access Token of Azure Devops

@@ -2,9 +2,20 @@
 
 set -e
 
+if [ -z "$TOKEN" ]; then
+    echo 1>&2 'TOKEN must be specified.'
+    exit 1
+fi
+
+if [ -z "$URL" -a -z "$ORG" ]; then
+    echo 1>&2 'URL or ORG must be specired.'
+    exit 1
+fi
+
 DOTNET_RUNTIME_VERSION=3.1
-VSTS_AGENT_DIR=/opt/vstsagent
+VSTS_AGENT_DIR_BASE=/opt/vstsagent
 FILES_URL_BASE=https://raw.githubusercontent.com/sengokyu/azure-templates/main/vm-vsts-agent/setup-files/
+TAR_BALL=/tmp/vsts-agent.tar.gz
 
 export AGENT_ALLOW_RUNASROOT=yes
 
@@ -35,12 +46,19 @@ get_latest_vsts_agent_url() {
 download_vsts_agent() {
     local targzurl=$(get_latest_vsts_agent_url)
 
-    mkdir ${VSTS_AGENT_DIR}
-    curl -L $targzurl | tar zxf - -C ${VSTS_AGENT_DIR}
+    curl -L $targzurl -o $TAR_BALL
+}
+
+extract_tarball() {
+    local dir=${VSTS_AGENT_DIR_BASE}-$1
+
+    mkdir $dir
+    tar zxf $TAR_BALL -C $dir
+    echo $dir
 }
 
 configure_vsts_agent() {
-    cd ${VSTS_AGENT_DIR}
+    cd $1
 
     ./config.sh \
         --unattended \
@@ -48,23 +66,31 @@ configure_vsts_agent() {
         --auth pat \
         --token "${TOKEN}" \
         --pool "${POOL:-Default}" \
-        --agent "$(hostname)" \
+        --agent $(hostname)-$2 \
         --replace \
         acceptTeeEula
 }
 
 install_vsts_agent_service() {
-    cd ${VSTS_AGENT_DIR}
+    cd $1
 
     ## Must specify running user
     ./svc.sh install root
     ./svc.sh start
 }
 
+main() {
+    download_aptfiles
+    install_packages
+    download_vsts_agent
+
+    for i in $(seq 1 ${COUNT:-1})
+    do
+        local dir=$(extract_tarball $i)
+        configure_vsts_agent $dir $i
+        install_vsts_agent_service $dir
+    done
+}
 
 ## Main
-download_aptfiles
-install_packages
-download_vsts_agent
-configure_vsts_agent
-install_vsts_agent_service
+main

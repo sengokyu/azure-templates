@@ -9,6 +9,11 @@
     "username": { "type": "string" },
     "sshPublicKey": { "type": "string" },
     "sshSourceAddress": { "type": "string", "defaultValue": "10.0.0.4" },
+    "count": {
+      "type": "int",
+      "defaultValue": 1,
+      "metadata": { "description": "Number of Agents" }
+    },
     "orgName": {
       "type": "string",
       "metadata": { "description": "Name of Azure DevOps organization" }
@@ -183,7 +188,7 @@
           "location": { "value": "[resourceGroup().location]" },
           "fileUris": { "value": ["[variables('scriptUrl')]"] },
           "commandToExecute": {
-            "value": "[concat('TOKEN=', parameters('token'), ' ORG=', parameters('orgName'),' POOL=', parameters('poolName'), ' /bin/bash deploy-vsts-agent.sh')]"
+            "value": "[concat('COUNT=', parameters('count'), ' TOKEN=', parameters('token'), ' ORG=', parameters('orgName'),' POOL=', parameters('poolName'), ' /bin/bash deploy-vsts-agent.sh')]"
           }
         }
       }
