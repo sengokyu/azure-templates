@@ -3,6 +3,7 @@
   "contentVersion": "1.0.0.0",
   "parameters": {
     "dnsName": { "value": "vsts-agent" },
+    "vmSize": { "value": "Standard_D2as_v4" },
     "username": { "value": "vstsadmin" },
     "sshPublicKey": {
       "value": "---- BEGIN SSH2 PUBLIC KEY ----\n ... \n---- END SSH2 PUBLIC KEY ----"
