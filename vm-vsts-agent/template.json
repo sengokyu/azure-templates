@@ -75,7 +75,7 @@
               "priority": 1000,
               "access": "Allow",
               "direction": "Inbound",
-              "destinationAddressPrefix": "*",
+              "destinationAddressPrefix": "VirtualNetwork",
               "destinationPortRange": "22",
               "protocol": "Tcp",
               "sourceAddressPrefix": "[parameters('sshSourceAddress')]",
