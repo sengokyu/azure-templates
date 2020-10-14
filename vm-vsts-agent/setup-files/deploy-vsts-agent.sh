@@ -16,6 +16,7 @@ DOTNET_RUNTIME_VERSION=3.1
 VSTS_AGENT_DIR_BASE=/opt/vstsagent
 FILES_URL_BASE=https://raw.githubusercontent.com/sengokyu/azure-templates/main/vm-vsts-agent/setup-files/
 TAR_BALL=/tmp/vsts-agent.tar.gz
+WORK_DIR_PREFIX=/mnt/vstswork
 
 export AGENT_ALLOW_RUNASROOT=yes
 
@@ -58,6 +59,8 @@ extract_tarball() {
 }
 
 configure_vsts_agent() {
+    mkdir -p $3
+
     cd $1
 
     ./config.sh \
@@ -66,8 +69,9 @@ configure_vsts_agent() {
         --auth pat \
         --token "${TOKEN}" \
         --pool "${POOL:-Default}" \
-        --agent $(hostname)-$2 \
+        --agent $2 \
         --replace \
+        --work $3 \
         acceptTeeEula
 }
 
@@ -79,15 +83,31 @@ install_vsts_agent_service() {
     ./svc.sh start
 }
 
+create_rc_local() {
+    if [ \! -f /etc/rc.local ]; then
+        echo '#!/bin/bash' > /etc/rc.local
+        echo 'set +e' >> /etc/rc.local
+
+        chmod u+x /etc/rc.local
+    fi
+}
+
+add_to_rc_local() {
+    echo "mkdir -p $1" >> /etc/rc.local
+}
+
 main() {
     download_aptfiles
     install_packages
     download_vsts_agent
+    create_rc_local    
 
     for i in $(seq 1 ${COUNT:-1})
     do
         local dir=$(extract_tarball $i)
-        configure_vsts_agent $dir $i
+        local workdir=${WORK_DIR_PREFIX}${i}
+        add_to_rc_local $workdir
+        configure_vsts_agent $dir $(hosname)-$i $workdir
         install_vsts_agent_service $dir
     done
 }
