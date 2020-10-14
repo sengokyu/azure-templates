@@ -106,8 +106,9 @@ main() {
     do
         local dir=$(extract_tarball $i)
         local workdir=${WORK_DIR_PREFIX}${i}
+        local agentname=$(hostname)-$i
         add_to_rc_local $workdir
-        configure_vsts_agent $dir $(hosname)-$i $workdir
+        configure_vsts_agent $dir $agentname $workdir
         install_vsts_agent_service $dir
     done
 }
