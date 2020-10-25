@@ -1,0 +1,73 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "containerGroupName": {
+      "type": "string",
+      "metadata": { "description": "Name of Azure Container Group" }
+    },
+    "pool": {
+      "type": "string",
+      "defaultValue": "Default",
+      "metadata": { "description": "Name of Agent Pool" }
+    },
+    "agent": {
+      "type": "string",
+      "defaultValue": "[parameters('containerGroupName')]",
+      "metadata": { "description": "Name of Agent" }
+    },
+    "token": {
+      "type": "string",
+      "metadata": { "description": "personal access token" }
+    },
+    "org": {
+      "type": "string",
+      "metadata": { "description": "Name of Organization" }
+    },
+    "cpu": {
+      "type": "int",
+      "defaultValue": 4,
+      "metadata": { "description": "Number of CPUs" }
+    },
+    "memoryInGb": {
+      "type": "int",
+      "defaultValue": 8,
+      "metadata": { "description": "Memory in GB" }
+    }
+  },
+  "variables": {
+    "containerImage": "sengokyu/azure-pipelines-agent:latest"
+  },
+  "resources": [
+    {
+      "name": "[parameters('containerGroupName')]",
+      "type": "Microsoft.ContainerInstance/containerGroups",
+      "apiVersion": "2019-12-01",
+      "location": "[resourceGroup().location]",
+      "properties": {
+        "containers": [
+          {
+            "name": "[parameters('agent')]",
+            "properties": {
+              "image": "[variables('containerImage')]",
+              "resources": {
+                "requests": {
+                  "cpu": "[parameters('cpu')]",
+                  "memoryInGb": "[parameters('memoryInGb')]"
+                }
+              },
+              "environmentVariables": [
+                { "name": "TOKEN", "secureValue": "[parameters('token')]" },
+                { "name": "ORG", "value": "[parameters('org')]" },
+                { "name": "POOL", "value": "[parameters('pool')]" },
+                { "name": "AGENT", "value": "[parameters('agent')]" }
+              ]
+            }
+          }
+        ],
+        "osType": "Linux",
+        "restartPolicy": "Never"
+      }
+    }
+  ]
+}

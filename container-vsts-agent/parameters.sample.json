@@ -1,0 +1,13 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "containerGroupName": { "value": "vsts-agent" },
+    "pool": { "value": "Default" },
+    "agent": { "value": "vsts-agent-on-aci" },
+    "token": { "value": "YourPersonalAccessToken" },
+    "org": { "value": "YourOrganizationName" },
+    "cpu": { "value": 4 },
+    "memoryInGb": { "value": 8 }
+  }
+}
