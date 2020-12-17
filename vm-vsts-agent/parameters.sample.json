@@ -2,13 +2,7 @@
   "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
   "contentVersion": "1.0.0.0",
   "parameters": {
-    "dnsName": { "value": "vsts-agent" },
     "vmSize": { "value": "Standard_D2as_v4" },
-    "username": { "value": "vstsadmin" },
-    "sshPublicKey": {
-      "value": "---- BEGIN SSH2 PUBLIC KEY ----\n ... \n---- END SSH2 PUBLIC KEY ----"
-    },
-    "sshSourceAddress": { "value": "0.0.0.0" },
     "count": { "value": 4 },
     "orgName": { "value": "YourOrganizationName" },
     "poolName": { "value": "Default" },

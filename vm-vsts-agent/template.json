@@ -2,13 +2,17 @@
   "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
   "contentVersion": "1.0.0.0",
   "parameters": {
-    "dnsName": { "type": "string" },
     "addressPrefix": { "type": "string", "defaultValue": "10.0.0.0/16" },
     "subnetAddressPrefix": { "type": "string", "defaultValue": "10.0.0.0/24" },
     "vmSize": { "type": "string", "defaultValue": "Standard_D2as_v4" },
-    "username": { "type": "string" },
-    "sshPublicKey": { "type": "string" },
-    "sshSourceAddress": { "type": "string", "defaultValue": "10.0.0.4" },
+    "username": {
+      "type": "string",
+      "defaultValue": "[uniqueString(resourceGroup().id)]"
+    },
+    "password": {
+      "type": "string",
+      "defaultValue": "[concat(utcNow(), uniqueString(resourceGroup().id, deployment().name))]"
+    },
     "count": {
       "type": "int",
       "defaultValue": 1,
@@ -30,15 +34,13 @@
   },
   "variables": {
     "names": {
-      "ip": "[concat('ip-', uniqueString(resourceGroup().id))]",
-      "nsg": "[concat('nsg-', uniqueString(resourceGroup().id))]",
-      "vnet": "[concat('vnet-', uniqueString(resourceGroup().id))]",
+      "nsg": "[concat('nsg-', uniqueString(resourceGroup().id, deployment().name))]",
+      "vnet": "[concat('vnet-', uniqueString(resourceGroup().id, deployment().name))]",
       "subnet": "subnet-0",
-      "nic": "[concat('nic-', uniqueString(resourceGroup().id))]",
-      "vm": "[concat('vm-', uniqueString(resourceGroup().id))]"
+      "nic": "[concat('nic-', uniqueString(resourceGroup().id, deployment().name))]",
+      "vm": "[concat('vm-', uniqueString(resourceGroup().id, deployment().name))]"
     },
     "ids": {
-      "ip": "[resourceId(resourceGroup().name, 'Microsoft.Network/publicIpAddresses', variables('names').ip)]",
       "nsg": "[resourceId(resourceGroup().name, 'Microsoft.Network/networkSecurityGroups', variables('names').nsg)]",
       "vnet": "[resourceId(resourceGroup().name,'Microsoft.Network/virtualNetworks', variables('names').vnet)]",
       "subnet": "[concat(resourceId(resourceGroup().name,'Microsoft.Network/virtualNetworks', variables('names').vnet), '/subnets/', variables('names').subnet)]",
@@ -51,47 +53,11 @@
   },
   "resources": [
     {
-      "name": "[variables('names').ip]",
-      "type": "Microsoft.Network/publicIPAddresses",
-      "apiVersion": "2019-11-01",
-      "location": "[resourceGroup().location]",
-      "tags": "[variables('tag')]",
-      "properties": {
-        "publicIPAllocationMethod": "Dynamic",
-        "dnsSettings": { "domainNameLabel": "[parameters('dnsName')]" }
-      }
-    },
-    {
-      "name": "[variables('names').nsg]",
-      "type": "Microsoft.Network/networkSecurityGroups",
-      "apiVersion": "2019-02-01",
-      "location": "[resourceGroup().location]",
-      "tags": "[variables('tag')]",
-      "properties": {
-        "securityRules": [
-          {
-            "name": "AllowInboundSsh",
-            "properties": {
-              "priority": 1000,
-              "access": "Allow",
-              "direction": "Inbound",
-              "destinationAddressPrefix": "VirtualNetwork",
-              "destinationPortRange": "22",
-              "protocol": "Tcp",
-              "sourceAddressPrefix": "[parameters('sshSourceAddress')]",
-              "sourcePortRange": "*"
-            }
-          }
-        ]
-      }
-    },
-    {
       "name": "[variables('names').vnet]",
       "type": "Microsoft.Network/virtualNetworks",
       "apiVersion": "2019-09-01",
       "location": "[resourceGroup().location]",
       "tags": "[variables('tag')]",
-      "dependsOn": ["[variables('ids').nsg]"],
       "properties": {
         "addressSpace": {
           "addressPrefixes": ["[parameters('addressPrefix')]"]
@@ -100,8 +66,7 @@
           {
             "name": "[variables('names').subnet]",
             "properties": {
-              "addressPrefix": "[parameters('subnetAddressPrefix')]",
-              "networkSecurityGroup": { "id": "[variables('ids').nsg]" }
+              "addressPrefix": "[parameters('subnetAddressPrefix')]"
             }
           }
         ]
@@ -113,14 +78,15 @@
       "apiVersion": "2018-10-01",
       "location": "[resourceGroup().location]",
       "tags": "[variables('tag')]",
-      "dependsOn": ["[variables('ids').ip]", "[variables('ids').vnet]"],
+      "dependsOn": ["[variables('ids').vnet]"],
       "properties": {
         "ipConfigurations": [
           {
             "name": "ipconfig1",
             "properties": {
-              "subnet": { "id": "[variables('ids').subnet]" },
-              "publicIPAddress": { "id": "[variables('ids').ip]" },
+              "subnet": {
+                "id": "[variables('ids').subnet]"
+              },
               "privateIPAllocationMethod": "Dynamic"
             }
           }
@@ -135,7 +101,9 @@
       "tags": "[variables('tag')]",
       "dependsOn": ["[variables('ids').nic]"],
       "properties": {
-        "hardwareProfile": { "vmSize": "[parameters('vmSize')]" },
+        "hardwareProfile": {
+          "vmSize": "[parameters('vmSize')]"
+        },
         "storageProfile": {
           "osDisk": {
             "createOption": "fromImage",
@@ -151,21 +119,18 @@
           }
         },
         "networkProfile": {
-          "networkInterfaces": [{ "id": "[variables('ids').nic]" }]
+          "networkInterfaces": [
+            {
+              "id": "[variables('ids').nic]"
+            }
+          ]
         },
         "osProfile": {
           "computerName": "[variables('names').vm]",
           "adminUsername": "[parameters('username')]",
+          "adminPassword": "[parameters('password')]",
           "linuxConfiguration": {
-            "disablePasswordAuthentication": true,
-            "ssh": {
-              "publicKeys": [
-                {
-                  "path": "[concat('/home/', parameters('username'), '/.ssh/authorized_keys')]",
-                  "keyData": "[parameters('sshPublicKey')]"
-                }
-              ]
-            }
+            "disablePasswordAuthentication": false
           }
         }
       }
@@ -184,9 +149,15 @@
           "uri": "https://gallery.azure.com/artifact/20161101/microsoft.custom-script-linux-arm.2.0.56/Artifacts/MainTemplate.json"
         },
         "parameters": {
-          "vmName": { "value": "[variables('names').vm]" },
-          "location": { "value": "[resourceGroup().location]" },
-          "fileUris": { "value": ["[variables('scriptUrl')]"] },
+          "vmName": {
+            "value": "[variables('names').vm]"
+          },
+          "location": {
+            "value": "[resourceGroup().location]"
+          },
+          "fileUris": {
+            "value": ["[variables('scriptUrl')]"]
+          },
           "commandToExecute": {
             "value": "[concat('COUNT=', parameters('count'), ' TOKEN=', parameters('token'), ' ORG=', parameters('orgName'),' POOL=', parameters('poolName'), ' /bin/bash deploy-vsts-agent.sh')]"
           }
@@ -197,7 +168,7 @@
   "outputs": {
     "message": {
       "type": "string",
-      "value": "NSG is not configured. Change the source IP address to connect ssh access."
+      "value": "[variables('names').vm] has deployed."
     }
   }
 }
