@@ -10,3 +10,6 @@ deploy:
 		-f template.json \
 		-p @parameters.json \
 		--mode Complete
+
+clean:
+	az resource delete --ids `az resource list -g $(RG) --query '[].id'`
